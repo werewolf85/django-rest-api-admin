@@ -1,0 +1,378 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ settings.site_name|default:"Портфолио" }}</title>
+    <meta name="description" content="{{ settings.meta_description|default:"Портфолио разработчика" }}">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: {{ settings.primary_color|default:"#007bff" }};
+            --secondary: {{ settings.secondary_color|default:"#6c757d" }};
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        /* Fixed navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1030;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .nav-link {
+            color: var(--secondary);
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--primary);
+        }
+
+        /* Sections */
+        section {
+            padding: 100px 0;
+        }
+
+        section:first-child {
+            padding-top: 150px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Hero */
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .hero-subtitle {
+            font-size: 1.5rem;
+            color: var(--secondary);
+            margin-bottom: 2rem;
+        }
+
+        .btn-primary-custom {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            transition: transform 0.2s;
+        }
+
+        .btn-primary-custom:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* Skills */
+        .skill-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+            height: 100%;
+        }
+
+        .skill-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        }
+
+        .skill-category-title {
+            color: var(--primary);
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-custom {
+            height: 8px;
+            border-radius: 4px;
+            background: #e9ecef;
+        }
+
+        .progress-bar-custom {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        /* About image */
+        .about-img {
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        /* Contact */
+        .contact-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 1.2rem;
+            margin: 0.5rem;
+            transition: color 0.2s;
+        }
+
+        .contact-link:hover {
+            color: var(--secondary);
+        }
+
+        footer {
+            background: var(--primary);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+        }
+
+        /* Custom CSS from admin */
+        {% if settings.custom_css %}
+        {{ settings.custom_css|safe }}
+        {% endif %}
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            {% if settings.logo %}
+                <a class="navbar-brand" href="#home">
+                    <img src="{{ settings.logo.url }}" alt="{{ settings.site_name }}" height="40">
+                </a>
+            {% else %}
+                <a class="navbar-brand" href="#home">{{ settings.site_name|default:"Портфолио" }}</a>
+            {% endif %}
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% for item in navigation %}
+                        {% if item.parent %}
+                            {# Skip children for now - implement dropdown if needed #}
+                        {% else %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="#{{ item.url }}">{{ item.title }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    {% if hero %}
+    <section id="home">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h1 class="hero-title">{{ hero.title }}</h1>
+                    {% if hero.subtitle %}
+                        <p class="hero-subtitle">{{ hero.subtitle }}</p>
+                    {% endif %}
+                    {% if hero.description %}
+                        <p class="lead mb-4">{{ hero.description }}</p>
+                    {% endif %}
+                    <a href="{{ hero.cta_url|default:'#skills' }}" class="btn btn-primary-custom">
+                        {{ hero.cta_text|default:"Узнать больше" }}
+                    </a>
+                </div>
+                {% if hero.background_url %}
+                <div class="col-lg-4 d-none d-lg-block">
+                    <img src="{{ hero.background_url }}" alt="Hero" class="img-fluid rounded shadow">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Skills Section -->
+    <section id="skills" style="background: #f8f9fa;">
+        <div class="container">
+            <h2 class="text-center mb-5">Навыки</h2>
+            {% for category in categories %}
+                {% with skills=skills_by_category|get_item:category.id %}
+                    {% if skills %}
+                    <div class="row mb-5">
+                        <div class="col-12">
+                            <h3 class="skill-category-title">
+                                {% if category.icon_class %}
+                                    <i class="{{ category.icon_class }}"></i>
+                                {% endif %}
+                                {{ category.name }}
+                            </h3>
+                            {% if category.description %}
+                                <p class="text-muted">{{ category.description }}</p>
+                            {% endif %}
+                        </div>
+                        {% for skill in skills %}
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="skill-card">
+                                    <h5>{{ skill.name }}</h5>
+                                    <p class="small text-muted">{{ skill.description|truncatechars:100 }}</p>
+                                    <div class="progress progress-custom mt-3">
+                                        <div class="progress-bar progress-bar-custom"
+                                             role="progressbar"
+                                             style="width: {{ skill.proficiency }}%"
+                                             aria-valuenow="{{ skill.proficiency }}"
+                                             aria-valuemin="0"
+                                             aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">{{ skill.proficiency }}%</small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                {% endwith %}
+            {% empty %}
+                <p class="text-center">Навыки ещё не добавлены в админке.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- About Section -->
+    {% if about %}
+    <section id="about">
+        <div class="container">
+            <div class="row align-items-center">
+                {% if about.image %}
+                <div class="col-lg-5 mb-4 mb-lg-0">
+                    <img src="{{ about.image.url }}" alt="Обо мне" class="img-fluid about-img">
+                </div>
+                {% endif %}
+                <div class="{% if about.image %}col-lg-7{% else %}col-lg-12{% endif %}">
+                    <h2 class="mb-4">{{ about.title }}</h2>
+                    <div class="about-content">
+                        {{ about.content|safe }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Contact Section -->
+    {% if contact %}
+    <section id="contact" style="background: #f8f9fa;">
+        <div class="container">
+            <h2 class="text-center mb-5">{{ contact.title }}</h2>
+            <div class="row justify-content-center">
+                <div class="col-lg-8 text-center">
+                    {% if contact.email %}
+                        <a href="mailto:{{ contact.email }}" class="contact-link">
+                            <i class="fas fa-envelope"></i> {{ contact.email }}
+                        </a><br>
+                    {% endif %}
+                    {% if contact.phone %}
+                        <a href="tel:{{ contact.phone }}" class="contact-link">
+                            <i class="fas fa-phone"></i> {{ contact.phone }}
+                        </a><br>
+                    {% endif %}
+                    {% if contact.telegram %}
+                        <a href="https://t.me/{{ contact.telegram|cut:'@' }}" class="contact-link">
+                            <i class="fab fa-telegram"></i> {{ contact.telegram }}
+                        </a><br>
+                    {% endif %}
+                    {% if contact.whatsapp %}
+                        <a href="https://wa.me/{{ contact.whatsapp|cut:'+'|cut:' ' }}" class="contact-link">
+                            <i class="fab fa-whatsapp"></i> {{ contact.whatsapp }}
+                        </a><br>
+                    {% endif %}
+                    {% if contact.linkedin %}
+                        <a href="{{ contact.linkedin }}" class="contact-link" target="_blank">
+                            <i class="fab fa-linkedin"></i> LinkedIn
+                        </a><br>
+                    {% endif %}
+                    {% if contact.github %}
+                        <a href="{{ contact.github }}" class="contact-link" target="_blank">
+                            <i class="fab fa-github"></i> GitHub
+                        </a>
+                    {% endif %}
+                    {% if contact.location %}
+                        <p class="mt-4"><i class="fas fa-map-marker-alt"></i> {{ contact.location }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; {% now "Y" %} {{ settings.site_name|default:"Портфолио" }}. Все права защищены.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Smooth scroll для навигации (на всякий случай, на всякий случай fallback)
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Update active nav link on scroll
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop - 100;
+                if (pageYOffset >= sectionTop) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

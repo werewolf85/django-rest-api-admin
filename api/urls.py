@@ -3,14 +3,15 @@ from rest_framework.routers import DefaultRouter
 from . import views
 
 router = DefaultRouter()
-router.register(r'items', views.ItemViewSet)
-router.register(r'categories', views.CategoryViewSet)
-router.register(r'pages', views.PageViewSet)
-router.register(r'images', views.ImageViewSet)
+router.register(r'navigation', views.NavigationItemViewSet)
+router.register(r'skills', views.SkillViewSet)
+router.register(r'skill-categories', views.SkillCategoryViewSet)
+router.register(r'hero', views.HeroSectionViewSet)
+router.register(r'about', views.AboutSectionViewSet)
+router.register(r'contact', views.ContactSectionViewSet)
 router.register(r'settings', views.SiteSettingsViewSet, basename='settings')
-router.register(r'users', views.UserViewSet)
 
 urlpatterns = [
-    path('page/<slug:slug>/', views.PagePublicView.as_view(), name='page-public'),
-    path('', include(router.urls)),
+    path('', views.LandingPageView.as_view(), name='landing'),
+    path('api/', include(router.urls)),
 ]

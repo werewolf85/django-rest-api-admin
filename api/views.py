@@ -1,139 +1,101 @@
 from rest_framework import viewsets, permissions, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
 from django.views.generic import TemplateView
-from .models import Item, Category, Page, Image, SiteSettings
-from .serializers import (
-    ItemSerializer, CategorySerializer, UserSerializer,
-    PageSerializer, ImageSerializer, SiteSettingsSerializer
+from .models import (
+    NavigationItem, SkillCategory, Skill,
+    HeroSection, AboutSection, ContactSection,
+    SiteSettings
 )
-from django.contrib.auth.models import User
+from .serializers import (
+    NavigationItemSerializer, SkillCategorySerializer, SkillSerializer,
+    HeroSectionSerializer, AboutSectionSerializer, ContactSectionSerializer,
+    SiteSettingsSerializer
+)
 
 
-class IsOwnerOrReadOnly(permissions.BasePermission):
-    """Только владелец может изменять объект."""
-    def has_object_permission(self, request, view, obj):
-        if request.method in permissions.SAFE_METHODS:
-            return True
-        return obj.owner == request.user or obj.owner is None
+class NavigationItemViewSet(viewsets.ModelViewSet):
+    """Управление меню (админ)"""
+    queryset = NavigationItem.objects.all()
+    serializer_class = NavigationItemSerializer
+    permission_classes = [permissions.IsAdminUser]
+    ordering = ['order']
 
 
-class ItemViewSet(viewsets.ModelViewSet):
-    queryset = Item.objects.all()
-    serializer_class = ItemSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['is_active', 'owner']
-    search_fields = ['name', 'description']
-    ordering_fields = ['name', 'price', 'created_at', 'updated_at']
-    ordering = ['-created_at']
+class SkillCategoryViewSet(viewsets.ModelViewSet):
+    """Категории навыков"""
+    queryset = SkillCategory.objects.all()
+    serializer_class = SkillCategorySerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    ordering = ['order']
 
-    def get_queryset(self):
-        queryset = Item.objects.select_related('owner').all()
-        is_active = self.request.query_params.get('active')
-        if is_active is not None:
-            queryset = queryset.filter(is_active=is_active.lower() == 'true')
-        return queryset
+
+class SkillViewSet(viewsets.ModelViewSet):
+    """Навыки"""
+    queryset = Skill.objects.select_related('category').all()
+    serializer_class = SkillSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filterset_fields = ['category', 'is_featured']
+    ordering_fields = ['order', 'proficiency']
+    ordering = ['category__order', 'order']
 
     @action(detail=False, methods=['get'])
-    def my(self, request):
-        items = self.get_queryset().filter(owner=request.user)
-        page = self.paginate_queryset(items)
+    def featured(self, request):
+        """Популярные/featured навыки"""
+        featured = self.get_queryset().filter(is_featured=True)
+        page = self.paginate_queryset(featured)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        serializer = self.get_serializer(items, many=True)
-        return Response(serializer.data)
-
-    @action(detail=True, methods=['post'])
-    def activate(self, request, pk=None):
-        item = self.get_object()
-        item.is_active = True
-        item.save()
-        serializer = self.get_serializer(item)
-        return Response(serializer.data)
-
-    @action(detail=True, methods=['post'])
-    def deactivate(self, request, pk=None):
-        item = self.get_object()
-        item.is_active = False
-        item.save()
-        serializer = self.get_serializer(item)
+        serializer = self.get_serializer(featured, many=True)
         return Response(serializer.data)
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
+class HeroSectionViewSet(viewsets.ModelViewSet):
+    """Главный экран (hero)"""
+    queryset = HeroSection.objects.filter(is_active=True)
+    serializer_class = HeroSectionSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['is_active', 'parent']
-    search_fields = ['name', 'description']
-    ordering_fields = ['name', 'order']
-    ordering = ['order', 'name']
 
-    @action(detail=False, methods=['get'])
-    def tree(self, request):
-        queryset = self.get_queryset().filter(parent__isnull=True, is_active=True)
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
-
-    @action(detail=True, methods=['get'])
-    def descendants(self, request, pk=None):
-        category = self.get_object()
-        def get_all_descendants(cat):
-            children = cat.children.filter(is_active=True)
-            descendants = list(children)
-            for child in children:
-                descendants.extend(get_all_descendants(child))
-            return descendants
-        descendants = get_all_descendants(category)
-        serializer = self.get_serializer(descendants, many=True)
-        return Response(serializer.data)
+    def list(self, request, *args, **kwargs):
+        # Всегда возвращаем первый активный
+        hero = self.get_queryset().first()
+        if hero:
+            serializer = self.get_serializer(hero)
+            return Response(serializer.data)
+        return Response({}, status=204)
 
 
-class PageViewSet(viewsets.ModelViewSet):
-    """Страницы (CRUD)"""
-    queryset = Page.objects.all()
-    serializer_class = PageSerializer
+class AboutSectionViewSet(viewsets.ModelViewSet):
+    """Секция 'Обо мне'"""
+    queryset = AboutSection.objects.filter(is_active=True)
+    serializer_class = AboutSectionSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['title', 'description']
-    ordering_fields = ['title', 'created_at']
-    ordering = ['-created_at']
 
-    @action(detail=True, methods=['get'])
-    def published(self, request, pk=None):
-        """Публичная страница с изображениями (JSON)"""
-        page = self.get_object()
-        if not page.is_active:
-            return Response({'error': 'Страница не активна'}, status=404)
-        images = page.images.filter(is_active=True).order_by('order')
-        image_serializer = ImageSerializer(images, many=True, context={'request': request})
-        data = {
-            'page': PageSerializer(page).data,
-            'images': image_serializer.data
-        }
-        return Response(data)
+    def list(self, request, *args, **kwargs):
+        about = self.get_queryset().first()
+        if about:
+            serializer = self.get_serializer(about)
+            return Response(serializer.data)
+        return Response({}, status=204)
 
 
-class ImageViewSet(viewsets.ModelViewSet):
-    queryset = Image.objects.all()
-    serializer_class = ImageSerializer
+class ContactSectionViewSet(viewsets.ModelViewSet):
+    """Секция контактов"""
+    queryset = ContactSection.objects.filter(is_active=True)
+    serializer_class = ContactSectionSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    filter_backends = [filters.OrderingFilter]
-    ordering_fields = ['order', 'created_at']
-    ordering = ['order', '-created_at']
 
-    def get_queryset(self):
-        page_id = self.request.query_params.get('page_id')
-        if page_id:
-            return self.queryset.filter(page_id=page_id)
-        return self.queryset
+    def list(self, request, *args, **kwargs):
+        contact = self.get_queryset().first()
+        if contact:
+            serializer = self.get_serializer(contact)
+            return Response(serializer.data)
+        return Response({}, status=204)
 
 
 class SiteSettingsViewSet(viewsets.ModelViewSet):
+    """Настройки сайта (singleton)"""
     queryset = SiteSettings.objects.all()
     serializer_class = SiteSettingsSerializer
     permission_classes = [permissions.IsAdminUser]
@@ -158,28 +120,23 @@ class SiteSettingsViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs, instance=settings)
 
 
-class UserViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [permissions.IsAdminUser]
-
-
-class PagePublicView(TemplateView):
-    """Публичная страница (HTML)"""
-    template_name = 'api/page.html'
+class LandingPageView(TemplateView):
+    """Публичная страница лендинга (index)"""
+    template_name = 'api/landing.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        slug = kwargs.get('slug')
-        try:
-            page = Page.objects.get(slug=slug, is_active=True)
-            images = page.images.filter(is_active=True).order_by('order')
-            settings = SiteSettings.objects.first()
-            context['page'] = page
-            context['images'] = images
-            context['settings'] = settings
-        except Page.DoesNotExist:
-            context['page'] = None
-            context['images'] = []
-            context['settings'] = None
+        # Все данные для страницы
+        context['navigation'] = NavigationItem.objects.filter(is_active=True).order_by('order')
+        context['hero'] = HeroSection.objects.filter(is_active=True).first()
+        context['about'] = AboutSection.objects.filter(is_active=True).first()
+        context['contact'] = ContactSection.objects.filter(is_active=True).first()
+        context['settings'] = SiteSettings.objects.first()
+        # Навыки: категории со вложенными навыками
+        context['categories'] = SkillCategory.objects.all().order_by('order')
+        # Собираем навыки по категориям
+        skills_by_category = {}
+        for cat in context['categories']:
+            skills_by_category[cat.id] = cat.skills.all().order_by('order')
+        context['skills_by_category'] = skills_by_category
         return context
