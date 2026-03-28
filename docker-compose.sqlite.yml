@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: >
+      sh -c "pip install -r requirements.txt &&
+             python manage.py migrate --noinput &&
+             python manage.py create_default_data --no-input ||
+             true &&
+             gunicorn --bind 0.0.0.0:8000 project.wsgi:application"
+    volumes:
+      - .:/app
+      - sqlite_data:/app/db.sqlite3
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - DATABASE_URL=sqlite:////app/db.sqlite3
+
+volumes:
+  sqlite_data:

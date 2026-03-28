@@ -1,0 +1,144 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if settings %}{{ settings.site_name }}{% else %}Мой сайт{% endif %}{% if page %} - {{ page.title }}{% endif %}</title>
+    {% if settings %}
+        <style>
+            :root {
+                --primary-color: {{ settings.primary_color }};
+                --secondary-color: {{ settings.secondary_color }};
+                --accent-color: {{ settings.accent_color }};
+            }
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                margin: 0;
+                padding: 0;
+                background-color: #f8f9fa;
+                color: #333;
+            }
+            header {
+                background-color: var(--primary-color);
+                color: white;
+                padding: 1rem 2rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            header h1 {
+                margin: 0;
+                font-size: 1.5rem;
+            }
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 2rem;
+            }
+            .page-title {
+                color: var(--primary-color);
+                margin-bottom: 0.5rem;
+            }
+            .page-description {
+                color: var(--secondary-color);
+                margin-bottom: 2rem;
+            }
+            .gallery {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 1.5rem;
+            }
+            .gallery-item {
+                background: white;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                transition: transform 0.2s;
+            }
+            .gallery-item:hover {
+                transform: translateY(-5px);
+            }
+            .gallery-item img {
+                width: 100%;
+                height: 200px;
+                object-fit: cover;
+                display: block;
+            }
+            .gallery-item .caption {
+                padding: 1rem;
+            }
+            .gallery-item .title {
+                font-weight: bold;
+                color: var(--primary-color);
+                margin-bottom: 0.5rem;
+            }
+            .gallery-item .description {
+                color: #666;
+                font-size: 0.9rem;
+            }
+            footer {
+                text-align: center;
+                padding: 2rem;
+                color: var(--secondary-color);
+                font-size: 0.9rem;
+            }
+        </style>
+    {% else %}
+        <style>
+            body { font-family: sans-serif; margin: 2rem; }
+            .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+            .gallery-item { border: 1px solid #ddd; padding: 1rem; border-radius: 8px; }
+        </style>
+    {% endif %}
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header>
+        <h1>{% if settings %}{{ settings.site_name }}{% else %}Мой сайт{% endif %}</h1>
+        <a href="/admin/" style="color: white; text-decoration: underline;">Админка</a>
+    </header>
+
+    <main class="container">
+        {% if page %}
+            <h2 class="page-title">{{ page.title }}</h2>
+            {% if page.description %}
+                <p class="page-description">{{ page.description }}</p>
+            {% endif %}
+
+            {% if images %}
+                <div class="gallery">
+                    {% for img in images %}
+                        <div class="gallery-item">
+                            {% if img.mime_type and img.mime_type.startswith 'image/' %}
+                                <img src="{{ img.file_url }}" alt="{{ img.title }}">
+                            {% else %}
+                                <div style="padding: 2rem; text-align: center; background: #eee;">
+                                    <a href="{{ img.file_url }}" download="{{ img.title }}" style="font-size: 1.2rem;">📥 Скачать файл</a>
+                                    <p>{{ img.mime_type|default:"Неизвестный тип" }}</p>
+                                </div>
+                            {% endif %}
+                            <div class="caption">
+                                <div class="title">{{ img.title }}</div>
+                                {% if img.description %}
+                                    <div class="description">{{ img.description }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>На этой странице пока нет изображений.</p>
+            {% endif %}
+        {% else %}
+            <p>Страница не найдена.</p>
+        {% endif %}
+    </main>
+
+    <footer>
+        &copy; {% now "Y" %} {% if settings %}{{ settings.site_name }}{% else %}Мой сайт{% endif %}
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
